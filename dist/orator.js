@@ -1,6 +1,12 @@
 "use strict";
 
 const _excluded = ["version", "host"];
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
 function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 function _objectWithoutProperties(e, t) { if (null == e) return {}; var o, r, i = _objectWithoutPropertiesLoose(e, t); if (Object.getOwnPropertySymbols) { var n = Object.getOwnPropertySymbols(e); for (r = 0; r < n.length; r++) o = n[r], -1 === t.indexOf(o) && {}.propertyIsEnumerable.call(e, o) && (i[o] = e[o]); } return i; }
@@ -1714,9 +1720,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     29: [function (require, module, exports) {
       "use strict";
 
-      const {
-        encodeString
-      } = require("./internals/querystring");
+      const _require = require("./internals/querystring"),
+        encodeString = _require.encodeString;
       function getAsPrimitive(value) {
         const type = typeof value;
         if (type === "string") {
@@ -1807,20 +1812,17 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       const querystring = require('fast-querystring');
       const isRegexSafe = require('safe-regex2');
       const deepEqual = require('fast-deep-equal');
-      const {
-        prettyPrintTree
-      } = require('./lib/pretty-print');
-      const {
-        StaticNode,
-        NODE_TYPES
-      } = require('./lib/node');
+      const _require2 = require('./lib/pretty-print'),
+        prettyPrintTree = _require2.prettyPrintTree;
+      const _require3 = require('./lib/node'),
+        StaticNode = _require3.StaticNode,
+        NODE_TYPES = _require3.NODE_TYPES;
       const Constrainer = require('./lib/constrainer');
       const httpMethods = require('./lib/http-methods');
       const httpMethodStrategy = require('./lib/strategies/http-method');
-      const {
-        safeDecodeURI,
-        safeDecodeURIComponent
-      } = require('./lib/url-sanitizer');
+      const _require4 = require('./lib/url-sanitizer'),
+        safeDecodeURI = _require4.safeDecodeURI,
+        safeDecodeURIComponent = _require4.safeDecodeURIComponent;
       const FULL_PATH_REGEXP = /^https?:\/\/.*?\//;
       const OPTIONAL_PARAM_REGEXP = /(\/:[^/()]*?)\?(\/?)/;
       const ESCAPE_REGEXP = /[.*+?^${}()|[\]\\]/g;
@@ -1871,6 +1873,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         this.ignoreTrailingSlash = opts.ignoreTrailingSlash || false;
         this.ignoreDuplicateSlashes = opts.ignoreDuplicateSlashes || false;
         this.maxParamLength = opts.maxParamLength || 100;
+        this.onMaxParamLength = opts.onMaxParamLength || null;
         this.allowUnsafeRegex = opts.allowUnsafeRegex || false;
         this.constrainer = new Constrainer(opts.constraints);
         this.useSemicolonDelimiter = opts.useSemicolonDelimiter || false;
@@ -2288,6 +2291,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         const params = [];
         const pathLen = path.length;
         const brothersNodesStack = [];
+        let maxParamLengthExceeded = false;
         while (true) {
           if (pathIndex === pathLen && currentNode.isLeafNode) {
             const handle = currentNode.handlerStorage.getMatchingHandler(derivedConstraints);
@@ -2303,6 +2307,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           let node = currentNode.getNextNode(path, pathIndex, brothersNodesStack, params.length);
           if (node === null) {
             if (brothersNodesStack.length === 0) {
+              if (maxParamLengthExceeded && this.onMaxParamLength) {
+                return this._onMaxParamLength(originPath);
+              }
               return null;
             }
             const brotherNodeState = brothersNodesStack.pop();
@@ -2338,17 +2345,31 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           }
           if (currentNode.isRegex) {
             const matchedParameters = currentNode.regex.exec(param);
-            if (matchedParameters === null) continue;
+            if (matchedParameters === null) {
+              node = null;
+              continue;
+            }
+            let regexMaxParamLengthExceeded = false;
             for (let i = 1; i < matchedParameters.length; i++) {
               const matchedParam = matchedParameters[i];
               if (matchedParam.length > maxParamLength) {
-                return null;
+                regexMaxParamLengthExceeded = true;
+                break;
               }
-              params.push(matchedParam);
+            }
+            if (regexMaxParamLengthExceeded) {
+              maxParamLengthExceeded = true;
+              node = null;
+              continue;
+            }
+            for (let i = 1; i < matchedParameters.length; i++) {
+              params.push(matchedParameters[i]);
             }
           } else {
             if (param.length > maxParamLength) {
-              return null;
+              maxParamLengthExceeded = true;
+              node = null;
+              continue;
             }
             params.push(param);
           }
@@ -2358,13 +2379,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       Router.prototype._rebuild = function (routes) {
         this.reset();
         for (const route of routes) {
-          const {
-            method,
-            path,
-            opts,
-            handler,
-            store
-          } = route;
+          const method = route.method,
+            path = route.path,
+            opts = route.opts,
+            handler = route.handler,
+            store = route.store;
           this._on(method, path, opts, handler, store);
         }
       };
@@ -2387,6 +2406,17 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           store: null
         };
       };
+      Router.prototype._onMaxParamLength = function (path) {
+        if (this.onMaxParamLength === null) {
+          return null;
+        }
+        const onMaxParamLength = this.onMaxParamLength;
+        return {
+          handler: (req, res, ctx) => onMaxParamLength(path, req, res),
+          params: {},
+          store: null
+        };
+      };
       Router.prototype.prettyPrint = function () {
         let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
         const method = options.method;
@@ -2394,10 +2424,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         let tree = null;
         if (method === undefined) {
           const _this$constrainer$str = this.constrainer.strategies,
-            {
-              version,
-              host
-            } = _this$constrainer$str,
+            version = _this$constrainer$str.version,
+            host = _this$constrainer$str.host,
             constraints = _objectWithoutProperties(_this$constrainer$str, _excluded);
           constraints[httpMethodStrategy.name] = httpMethodStrategy;
           const mergedRouter = new Router(_objectSpread(_objectSpread({}, this._opts), {}, {
@@ -2663,9 +2691,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     32: [function (require, module, exports) {
       'use strict';
 
-      const {
-        NullObject
-      } = require('./null-object');
+      const _require5 = require('./null-object'),
+        NullObject = _require5.NullObject;
       const httpMethodStrategy = require('./strategies/http-method');
       class HandlerStorage {
         constructor() {
@@ -2798,8 +2825,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
             }
           }
 
-          // Return the first handler who's bit is set in the candidates https://stackoverflow.com/questions/18134985/how-to-find-index-of-first-set-bit
-          lines.push('return this.handlers[Math.floor(Math.log2(candidates))]');
+          // Return the highest set bit index in the candidates bitmask.
+          lines.push('return this.handlers[31 - Math.clz32(candidates)]');
           this._getHandlerMatchingConstraints = new Function('derivedConstraints', lines.join('\n')); // eslint-disable-line
         }
       }
@@ -3076,7 +3103,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       }
       function serializeMetaData(metaData) {
         let serializedMetaData = '';
-        for (const [key, value] of Object.entries(metaData)) {
+        for (const _ref of Object.entries(metaData)) {
+          var _ref2 = _slicedToArray(_ref, 2);
+          const key = _ref2[0];
+          const value = _ref2[1];
           serializedMetaData += "\n\u2022 (".concat(key, ") ").concat(value);
         }
         return serializedMetaData;
@@ -3224,7 +3254,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         if (typeof version !== 'string') {
           throw new TypeError('Version should be a string');
         }
-        let [major, minor, patch] = version.split('.', 3);
+        let _version$split = version.split('.', 3),
+          _version$split2 = _slicedToArray(_version$split, 3),
+          major = _version$split2[0],
+          minor = _version$split2[1],
+          patch = _version$split2[2];
         if (isNaN(major)) {
           throw new TypeError('Major version must be a numeric value');
         }
@@ -4738,7 +4772,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
             this.log.error("Orator HEAD Route mapping failed -- route parameter was ".concat(typeof pRoute, " instead of a string."));
             return false;
           }
-          return true;
+          for (var _len11 = arguments.length, fRouteProcessingFunctions = new Array(_len11 > 1 ? _len11 - 1 : 0), _key11 = 1; _key11 < _len11; _key11++) {
+            fRouteProcessingFunctions[_key11 - 1] = arguments[_key11];
+          }
+          return this.doHead(pRoute, ...fRouteProcessingFunctions);
         }
         /**
          * A helper method that combines the HEAD method with the bodyParser middleware.
@@ -4748,8 +4785,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
          * @returns {any} - The result of adding the route to the concrete service provider (ex. a route object, a boolean).
          */
         headWithBodyParser(pRoute) {
-          for (var _len11 = arguments.length, fRouteProcessingFunctions = new Array(_len11 > 1 ? _len11 - 1 : 0), _key11 = 1; _key11 < _len11; _key11++) {
-            fRouteProcessingFunctions[_key11 - 1] = arguments[_key11];
+          for (var _len12 = arguments.length, fRouteProcessingFunctions = new Array(_len12 > 1 ? _len12 - 1 : 0), _key12 = 1; _key12 < _len12; _key12++) {
+            fRouteProcessingFunctions[_key12 - 1] = arguments[_key12];
           }
           return this.head(pRoute, this.bodyParser(), ...fRouteProcessingFunctions);
         }
@@ -5062,10 +5099,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
             }
           case types_1.types.REPETITION:
             {
-              const {
-                min,
-                max
-              } = token;
+              const min = token.min,
+                max = token.max;
               let endWith;
               if (min === 0 && max === 1) {
                 endWith = '?';
@@ -5890,11 +5925,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
        * @param {SetLookup} param The predefined 'set-lookup' & the number of elements in the lookup
        * @returns {boolean} True if the character set corresponds to the 'set-lookup'
        */
-      function isSameSet(set, _ref) {
-        let {
-          lookup,
-          len
-        } = _ref;
+      function isSameSet(set, _ref3) {
+        let lookup = _ref3.lookup,
+          len = _ref3.len;
         // If the set and the lookup are not of the same length
         // then we immediately know that the lookup will be false
         if (len !== set.length) {
@@ -5965,9 +5998,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       'use strict';
 
       const parse = require('ret');
-      const {
-        types
-      } = require('ret');
+      const _require6 = require('ret'),
+        types = _require6.types;
 
       /**
        * @param {*} node
@@ -6215,7 +6247,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         }
         buildFindMyWayHandler(pRouteFunctionArray) {
           let tmpRouteFunctionArray = pRouteFunctionArray;
-          return (pRequest, pResponse, pData) => {
+          return (pRequest, pResponse) => {
             let tmpAnticipate = this.fable.serviceManager.instantiateServiceProviderWithoutRegistration('Anticipate');
             tmpAnticipate.anticipate(fNext => {
               return this.executePreBehaviorFunctions(pRequest, pResponse, fNext);
@@ -6256,8 +6288,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
          * @returns {Promise} A promise that resolves when the route processing is complete.
          */
         doGet(pRoute) {
-          for (var _len12 = arguments.length, fRouteProcessingFunctions = new Array(_len12 > 1 ? _len12 - 1 : 0), _key12 = 1; _key12 < _len12; _key12++) {
-            fRouteProcessingFunctions[_key12 - 1] = arguments[_key12];
+          for (var _len13 = arguments.length, fRouteProcessingFunctions = new Array(_len13 > 1 ? _len13 - 1 : 0), _key13 = 1; _key13 < _len13; _key13++) {
+            fRouteProcessingFunctions[_key13 - 1] = arguments[_key13];
           }
           return this.addRouteProcessor('GET', pRoute, Array.from(fRouteProcessingFunctions));
         }
@@ -6270,8 +6302,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
          * @returns {Promise} - A promise that resolves when the route processing is complete.
          */
         doPut(pRoute) {
-          for (var _len13 = arguments.length, fRouteProcessingFunctions = new Array(_len13 > 1 ? _len13 - 1 : 0), _key13 = 1; _key13 < _len13; _key13++) {
-            fRouteProcessingFunctions[_key13 - 1] = arguments[_key13];
+          for (var _len14 = arguments.length, fRouteProcessingFunctions = new Array(_len14 > 1 ? _len14 - 1 : 0), _key14 = 1; _key14 < _len14; _key14++) {
+            fRouteProcessingFunctions[_key14 - 1] = arguments[_key14];
           }
           return this.addRouteProcessor('PUT', pRoute, Array.from(fRouteProcessingFunctions));
         }
@@ -6284,8 +6316,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
          * @returns {Promise} - A promise that resolves when the route processing is complete.
          */
         doPost(pRoute) {
-          for (var _len14 = arguments.length, fRouteProcessingFunctions = new Array(_len14 > 1 ? _len14 - 1 : 0), _key14 = 1; _key14 < _len14; _key14++) {
-            fRouteProcessingFunctions[_key14 - 1] = arguments[_key14];
+          for (var _len15 = arguments.length, fRouteProcessingFunctions = new Array(_len15 > 1 ? _len15 - 1 : 0), _key15 = 1; _key15 < _len15; _key15++) {
+            fRouteProcessingFunctions[_key15 - 1] = arguments[_key15];
           }
           return this.addRouteProcessor('POST', pRoute, Array.from(fRouteProcessingFunctions));
         }
@@ -6298,8 +6330,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
          * @returns {Object} - The updated route processor object.
          */
         doDel(pRoute) {
-          for (var _len15 = arguments.length, fRouteProcessingFunctions = new Array(_len15 > 1 ? _len15 - 1 : 0), _key15 = 1; _key15 < _len15; _key15++) {
-            fRouteProcessingFunctions[_key15 - 1] = arguments[_key15];
+          for (var _len16 = arguments.length, fRouteProcessingFunctions = new Array(_len16 > 1 ? _len16 - 1 : 0), _key16 = 1; _key16 < _len16; _key16++) {
+            fRouteProcessingFunctions[_key16 - 1] = arguments[_key16];
           }
           return this.addRouteProcessor('DELETE', pRoute, Array.from(fRouteProcessingFunctions));
         }
@@ -6312,8 +6344,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
          * @returns {boolean} - Returns true if the route processor was added successfully, false otherwise.
          */
         doPatch(pRoute) {
-          for (var _len16 = arguments.length, fRouteProcessingFunctions = new Array(_len16 > 1 ? _len16 - 1 : 0), _key16 = 1; _key16 < _len16; _key16++) {
-            fRouteProcessingFunctions[_key16 - 1] = arguments[_key16];
+          for (var _len17 = arguments.length, fRouteProcessingFunctions = new Array(_len17 > 1 ? _len17 - 1 : 0), _key17 = 1; _key17 < _len17; _key17++) {
+            fRouteProcessingFunctions[_key17 - 1] = arguments[_key17];
           }
           return this.addRouteProcessor('PATCH', pRoute, Array.from(fRouteProcessingFunctions));
         }
@@ -6326,8 +6358,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
          * @returns {Object} - The updated Orator-ServiceServer-IPC object.
          */
         doOpts(pRoute) {
-          for (var _len17 = arguments.length, fRouteProcessingFunctions = new Array(_len17 > 1 ? _len17 - 1 : 0), _key17 = 1; _key17 < _len17; _key17++) {
-            fRouteProcessingFunctions[_key17 - 1] = arguments[_key17];
+          for (var _len18 = arguments.length, fRouteProcessingFunctions = new Array(_len18 > 1 ? _len18 - 1 : 0), _key18 = 1; _key18 < _len18; _key18++) {
+            fRouteProcessingFunctions[_key18 - 1] = arguments[_key18];
           }
           return this.addRouteProcessor('OPTIONS', pRoute, Array.from(fRouteProcessingFunctions));
         }
@@ -6340,8 +6372,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
          * @returns {Promise} - A promise that resolves when the route processing is complete.
          */
         doHead(pRoute) {
-          for (var _len18 = arguments.length, fRouteProcessingFunctions = new Array(_len18 > 1 ? _len18 - 1 : 0), _key18 = 1; _key18 < _len18; _key18++) {
-            fRouteProcessingFunctions[_key18 - 1] = arguments[_key18];
+          for (var _len19 = arguments.length, fRouteProcessingFunctions = new Array(_len19 > 1 ? _len19 - 1 : 0), _key19 = 1; _key19 < _len19; _key19++) {
+            fRouteProcessingFunctions[_key19 - 1] = arguments[_key19];
           }
           return this.addRouteProcessor('HEAD', pRoute, Array.from(fRouteProcessingFunctions));
         }
@@ -6352,10 +6384,14 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         /**
          * Invokes a method on the IPC provider.
          *
+         * The route handler is dispatched with the canonical find-my-way signature
+         * (pRequest, pResponse, pParams, pStore, pSearchParams), so handlers
+         * registered directly on the router see the same arguments as lookup().
+         *
          * @param {string} pMethod - The method to invoke.
          * @param {string} pRoute - The route to invoke.
-         * @param {any} pData - The data to pass to the method.
-         * @param {Function} fCallback - The callback function to handle the response.
+         * @param {any|Function} pData - The request body, exposed to handlers as pRequest.body, or the completion callback when the body is skipped.
+         * @param {Function} [fCallback] - The callback function to handle the response; required unless passed via pData.
          * @throws {Error} Throws an error if invoked without a callback function.
          */
         invoke(pMethod, pRoute, pData, fCallback) {
@@ -6369,6 +6405,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           let tmpRequest = {
             method: pMethod,
             url: pRoute,
+            body: typeof pData == 'function' ? undefined : pData,
             guid: this.fable.getUUID()
           };
 
@@ -6385,7 +6422,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           //params: handle._createParamsObject(params)//,
           //searchParams: this.querystringParser(querystring)
 
-          tmpHandler.handler(tmpRequest, tmpSynthesizedResponseData, pData).then(pResults => {
+          // Dispatch with the canonical find-my-way handler signature so handlers
+          // registered directly on the router see the same arguments as lookup().
+          tmpHandler.handler(tmpRequest, tmpSynthesizedResponseData, tmpHandler.params, tmpHandler.store, tmpHandler.searchParams).then(pResults => {
             return tmpCallback(null, tmpSynthesizedResponseData.responseData, tmpSynthesizedResponseData, pResults);
           }, pError => {
             this.log.trace('IPC Response Received', {
@@ -6656,8 +6695,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
          *
          * @param {string} pMethod - The method to invoke.
          * @param {string} pRoute - The route to invoke.
-         * @param {any} pData - The data to send with the invocation.
-         * @param {Function} fCallback - The callback function to execute after the invocation.
+         * @param {any|Function} pData - The request body, exposed to handlers as pRequest.body, or the completion callback when the body is skipped.
+         * @param {Function} [fCallback] - The callback function to execute after the invocation; required unless passed via pData.
          * @returns {any} - The result of the invocation.
          */
         invoke(pMethod, pRoute, pData, fCallback) {

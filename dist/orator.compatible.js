@@ -1900,6 +1900,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         this.ignoreTrailingSlash = opts.ignoreTrailingSlash || false;
         this.ignoreDuplicateSlashes = opts.ignoreDuplicateSlashes || false;
         this.maxParamLength = opts.maxParamLength || 100;
+        this.onMaxParamLength = opts.onMaxParamLength || null;
         this.allowUnsafeRegex = opts.allowUnsafeRegex || false;
         this.constrainer = new Constrainer(opts.constraints);
         this.useSemicolonDelimiter = opts.useSemicolonDelimiter || false;
@@ -2354,6 +2355,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         var params = [];
         var pathLen = path.length;
         var brothersNodesStack = [];
+        var maxParamLengthExceeded = false;
         while (true) {
           if (pathIndex === pathLen && currentNode.isLeafNode) {
             var handle = currentNode.handlerStorage.getMatchingHandler(derivedConstraints);
@@ -2369,6 +2371,9 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           var node = currentNode.getNextNode(path, pathIndex, brothersNodesStack, params.length);
           if (node === null) {
             if (brothersNodesStack.length === 0) {
+              if (maxParamLengthExceeded && this.onMaxParamLength) {
+                return this._onMaxParamLength(originPath);
+              }
               return null;
             }
             var brotherNodeState = brothersNodesStack.pop();
@@ -2404,17 +2409,31 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           }
           if (currentNode.isRegex) {
             var matchedParameters = currentNode.regex.exec(param);
-            if (matchedParameters === null) continue;
+            if (matchedParameters === null) {
+              node = null;
+              continue;
+            }
+            var regexMaxParamLengthExceeded = false;
             for (var i = 1; i < matchedParameters.length; i++) {
               var matchedParam = matchedParameters[i];
               if (matchedParam.length > maxParamLength) {
-                return null;
+                regexMaxParamLengthExceeded = true;
+                break;
               }
-              params.push(matchedParam);
+            }
+            if (regexMaxParamLengthExceeded) {
+              maxParamLengthExceeded = true;
+              node = null;
+              continue;
+            }
+            for (var _i = 1; _i < matchedParameters.length; _i++) {
+              params.push(matchedParameters[_i]);
             }
           } else {
             if (param.length > maxParamLength) {
-              return null;
+              maxParamLengthExceeded = true;
+              node = null;
+              continue;
             }
             params.push(param);
           }
@@ -2457,6 +2476,19 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         return {
           handler: function handler(req, res, ctx) {
             return onBadUrl(path, req, res);
+          },
+          params: {},
+          store: null
+        };
+      };
+      Router.prototype._onMaxParamLength = function (path) {
+        if (this.onMaxParamLength === null) {
+          return null;
+        }
+        var onMaxParamLength = this.onMaxParamLength;
+        return {
+          handler: function handler(req, res, ctx) {
+            return onMaxParamLength(path, req, res);
           },
           params: {},
           store: null
@@ -2599,8 +2631,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
 
           // validate and optimize prototypes of given custom strategies
           if (customStrategies) {
-            for (var _i = 0, _Object$values = Object.values(customStrategies); _i < _Object$values.length; _i++) {
-              var strategy = _Object$values[_i];
+            for (var _i2 = 0, _Object$values = Object.values(customStrategies); _i2 < _Object$values.length; _i2++) {
+              var strategy = _Object$values[_i2];
               this.addConstraintStrategy(strategy);
             }
           }
@@ -2817,8 +2849,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
             if (constraintsNames.length === 0) {
               this.unconstrainedHandler = handlerObject;
             }
-            for (var _i2 = 0, _constraintsNames = constraintsNames; _i2 < _constraintsNames.length; _i2++) {
-              var constraint = _constraintsNames[_i2];
+            for (var _i3 = 0, _constraintsNames = constraintsNames; _i3 < _constraintsNames.length; _i3++) {
+              var constraint = _constraintsNames[_i3];
               if (!this.constraints.includes(constraint)) {
                 if (constraint === 'version') {
                   // always check the version constraint first as it is the most selective
@@ -2950,8 +2982,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
               }
             }
 
-            // Return the first handler who's bit is set in the candidates https://stackoverflow.com/questions/18134985/how-to-find-index-of-first-set-bit
-            lines.push('return this.handlers[Math.floor(Math.log2(candidates))]');
+            // Return the highest set bit index in the candidates bitmask.
+            lines.push('return this.handlers[31 - Math.clz32(candidates)]');
             this._getHandlerMatchingConstraints = new Function('derivedConstraints', lines.join('\n')); // eslint-disable-line
           }
         }]);
@@ -3290,8 +3322,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }
       function serializeMetaData(metaData) {
         var serializedMetaData = '';
-        for (var _i3 = 0, _Object$entries = Object.entries(metaData); _i3 < _Object$entries.length; _i3++) {
-          var _Object$entries$_i = _slicedToArray(_Object$entries[_i3], 2),
+        for (var _i4 = 0, _Object$entries = Object.entries(metaData); _i4 < _Object$entries.length; _i4++) {
+          var _Object$entries$_i = _slicedToArray(_Object$entries[_i4], 2),
             key = _Object$entries$_i[0],
             value = _Object$entries$_i[1];
           serializedMetaData += "\n\u2022 (".concat(key, ") ").concat(value);
@@ -3365,14 +3397,14 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           prefix = '';
         }
         if (node.staticChildren) {
-          for (var _i4 = 0, _Object$values2 = Object.values(node.staticChildren); _i4 < _Object$values2.length; _i4++) {
-            var child = _Object$values2[_i4];
+          for (var _i5 = 0, _Object$values2 = Object.values(node.staticChildren); _i5 < _Object$values2.length; _i5++) {
+            var child = _Object$values2[_i5];
             buildObjectTree(child, tree, prefix + child.prefix, options);
           }
         }
         if (node.parametricChildren) {
-          for (var _i5 = 0, _Object$values3 = Object.values(node.parametricChildren); _i5 < _Object$values3.length; _i5++) {
-            var _child = _Object$values3[_i5];
+          for (var _i6 = 0, _Object$values3 = Object.values(node.parametricChildren); _i6 < _Object$values3.length; _i6++) {
+            var _child = _Object$values3[_i6];
             var childPrefix = Array.from(_child.nodePaths).join('|');
             buildObjectTree(_child, tree, prefix + childPrefix, options);
           }
@@ -3406,8 +3438,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
             if (exact) {
               return exact;
             }
-            for (var _i6 = 0, _regexHosts = regexHosts; _i6 < _regexHosts.length; _i6++) {
-              var regex = _regexHosts[_i6];
+            for (var _i7 = 0, _regexHosts = regexHosts; _i7 < _regexHosts.length; _i7++) {
+              var regex = _regexHosts[_i7];
               if (regex.host.test(host)) {
                 return regex.value;
               }
@@ -5027,7 +5059,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
               this.log.error("Orator HEAD Route mapping failed -- route parameter was ".concat(_typeof(pRoute), " instead of a string."));
               return false;
             }
-            return true;
+            for (var _len11 = arguments.length, fRouteProcessingFunctions = new Array(_len11 > 1 ? _len11 - 1 : 0), _key11 = 1; _key11 < _len11; _key11++) {
+              fRouteProcessingFunctions[_key11 - 1] = arguments[_key11];
+            }
+            return this.doHead.apply(this, [pRoute].concat(fRouteProcessingFunctions));
           }
           /**
            * A helper method that combines the HEAD method with the bodyParser middleware.
@@ -5039,8 +5074,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }, {
           key: "headWithBodyParser",
           value: function headWithBodyParser(pRoute) {
-            for (var _len11 = arguments.length, fRouteProcessingFunctions = new Array(_len11 > 1 ? _len11 - 1 : 0), _key11 = 1; _key11 < _len11; _key11++) {
-              fRouteProcessingFunctions[_key11 - 1] = arguments[_key11];
+            for (var _len12 = arguments.length, fRouteProcessingFunctions = new Array(_len12 > 1 ? _len12 - 1 : 0), _key12 = 1; _key12 < _len12; _key12++) {
+              fRouteProcessingFunctions[_key12 - 1] = arguments[_key12];
             }
             return this.head.apply(this, [pRoute, this.bodyParser()].concat(fRouteProcessingFunctions));
           }
@@ -6600,7 +6635,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           value: function buildFindMyWayHandler(pRouteFunctionArray) {
             var _this1 = this;
             var tmpRouteFunctionArray = pRouteFunctionArray;
-            return function (pRequest, pResponse, pData) {
+            return function (pRequest, pResponse) {
               var tmpAnticipate = _this1.fable.serviceManager.instantiateServiceProviderWithoutRegistration('Anticipate');
               tmpAnticipate.anticipate(function (fNext) {
                 return _this1.executePreBehaviorFunctions(pRequest, pResponse, fNext);
@@ -6648,8 +6683,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }, {
           key: "doGet",
           value: function doGet(pRoute) {
-            for (var _len12 = arguments.length, fRouteProcessingFunctions = new Array(_len12 > 1 ? _len12 - 1 : 0), _key12 = 1; _key12 < _len12; _key12++) {
-              fRouteProcessingFunctions[_key12 - 1] = arguments[_key12];
+            for (var _len13 = arguments.length, fRouteProcessingFunctions = new Array(_len13 > 1 ? _len13 - 1 : 0), _key13 = 1; _key13 < _len13; _key13++) {
+              fRouteProcessingFunctions[_key13 - 1] = arguments[_key13];
             }
             return this.addRouteProcessor('GET', pRoute, Array.from(fRouteProcessingFunctions));
           }
@@ -6664,8 +6699,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }, {
           key: "doPut",
           value: function doPut(pRoute) {
-            for (var _len13 = arguments.length, fRouteProcessingFunctions = new Array(_len13 > 1 ? _len13 - 1 : 0), _key13 = 1; _key13 < _len13; _key13++) {
-              fRouteProcessingFunctions[_key13 - 1] = arguments[_key13];
+            for (var _len14 = arguments.length, fRouteProcessingFunctions = new Array(_len14 > 1 ? _len14 - 1 : 0), _key14 = 1; _key14 < _len14; _key14++) {
+              fRouteProcessingFunctions[_key14 - 1] = arguments[_key14];
             }
             return this.addRouteProcessor('PUT', pRoute, Array.from(fRouteProcessingFunctions));
           }
@@ -6680,8 +6715,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }, {
           key: "doPost",
           value: function doPost(pRoute) {
-            for (var _len14 = arguments.length, fRouteProcessingFunctions = new Array(_len14 > 1 ? _len14 - 1 : 0), _key14 = 1; _key14 < _len14; _key14++) {
-              fRouteProcessingFunctions[_key14 - 1] = arguments[_key14];
+            for (var _len15 = arguments.length, fRouteProcessingFunctions = new Array(_len15 > 1 ? _len15 - 1 : 0), _key15 = 1; _key15 < _len15; _key15++) {
+              fRouteProcessingFunctions[_key15 - 1] = arguments[_key15];
             }
             return this.addRouteProcessor('POST', pRoute, Array.from(fRouteProcessingFunctions));
           }
@@ -6696,8 +6731,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }, {
           key: "doDel",
           value: function doDel(pRoute) {
-            for (var _len15 = arguments.length, fRouteProcessingFunctions = new Array(_len15 > 1 ? _len15 - 1 : 0), _key15 = 1; _key15 < _len15; _key15++) {
-              fRouteProcessingFunctions[_key15 - 1] = arguments[_key15];
+            for (var _len16 = arguments.length, fRouteProcessingFunctions = new Array(_len16 > 1 ? _len16 - 1 : 0), _key16 = 1; _key16 < _len16; _key16++) {
+              fRouteProcessingFunctions[_key16 - 1] = arguments[_key16];
             }
             return this.addRouteProcessor('DELETE', pRoute, Array.from(fRouteProcessingFunctions));
           }
@@ -6712,8 +6747,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }, {
           key: "doPatch",
           value: function doPatch(pRoute) {
-            for (var _len16 = arguments.length, fRouteProcessingFunctions = new Array(_len16 > 1 ? _len16 - 1 : 0), _key16 = 1; _key16 < _len16; _key16++) {
-              fRouteProcessingFunctions[_key16 - 1] = arguments[_key16];
+            for (var _len17 = arguments.length, fRouteProcessingFunctions = new Array(_len17 > 1 ? _len17 - 1 : 0), _key17 = 1; _key17 < _len17; _key17++) {
+              fRouteProcessingFunctions[_key17 - 1] = arguments[_key17];
             }
             return this.addRouteProcessor('PATCH', pRoute, Array.from(fRouteProcessingFunctions));
           }
@@ -6728,8 +6763,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }, {
           key: "doOpts",
           value: function doOpts(pRoute) {
-            for (var _len17 = arguments.length, fRouteProcessingFunctions = new Array(_len17 > 1 ? _len17 - 1 : 0), _key17 = 1; _key17 < _len17; _key17++) {
-              fRouteProcessingFunctions[_key17 - 1] = arguments[_key17];
+            for (var _len18 = arguments.length, fRouteProcessingFunctions = new Array(_len18 > 1 ? _len18 - 1 : 0), _key18 = 1; _key18 < _len18; _key18++) {
+              fRouteProcessingFunctions[_key18 - 1] = arguments[_key18];
             }
             return this.addRouteProcessor('OPTIONS', pRoute, Array.from(fRouteProcessingFunctions));
           }
@@ -6744,8 +6779,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }, {
           key: "doHead",
           value: function doHead(pRoute) {
-            for (var _len18 = arguments.length, fRouteProcessingFunctions = new Array(_len18 > 1 ? _len18 - 1 : 0), _key18 = 1; _key18 < _len18; _key18++) {
-              fRouteProcessingFunctions[_key18 - 1] = arguments[_key18];
+            for (var _len19 = arguments.length, fRouteProcessingFunctions = new Array(_len19 > 1 ? _len19 - 1 : 0), _key19 = 1; _key19 < _len19; _key19++) {
+              fRouteProcessingFunctions[_key19 - 1] = arguments[_key19];
             }
             return this.addRouteProcessor('HEAD', pRoute, Array.from(fRouteProcessingFunctions));
           }
@@ -6756,10 +6791,14 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           /**
            * Invokes a method on the IPC provider.
            *
+           * The route handler is dispatched with the canonical find-my-way signature
+           * (pRequest, pResponse, pParams, pStore, pSearchParams), so handlers
+           * registered directly on the router see the same arguments as lookup().
+           *
            * @param {string} pMethod - The method to invoke.
            * @param {string} pRoute - The route to invoke.
-           * @param {any} pData - The data to pass to the method.
-           * @param {Function} fCallback - The callback function to handle the response.
+           * @param {any|Function} pData - The request body, exposed to handlers as pRequest.body, or the completion callback when the body is skipped.
+           * @param {Function} [fCallback] - The callback function to handle the response; required unless passed via pData.
            * @throws {Error} Throws an error if invoked without a callback function.
            */
         }, {
@@ -6776,6 +6815,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
             var tmpRequest = {
               method: pMethod,
               url: pRoute,
+              body: typeof pData == 'function' ? undefined : pData,
               guid: this.fable.getUUID()
             };
 
@@ -6792,7 +6832,9 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
             //params: handle._createParamsObject(params)//,
             //searchParams: this.querystringParser(querystring)
 
-            tmpHandler.handler(tmpRequest, tmpSynthesizedResponseData, pData).then(function (pResults) {
+            // Dispatch with the canonical find-my-way handler signature so handlers
+            // registered directly on the router see the same arguments as lookup().
+            tmpHandler.handler(tmpRequest, tmpSynthesizedResponseData, tmpHandler.params, tmpHandler.store, tmpHandler.searchParams).then(function (pResults) {
               return tmpCallback(null, tmpSynthesizedResponseData.responseData, tmpSynthesizedResponseData, pResults);
             }, function (pError) {
               _this10.log.trace('IPC Response Received', {
@@ -7095,8 +7137,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
            *
            * @param {string} pMethod - The method to invoke.
            * @param {string} pRoute - The route to invoke.
-           * @param {any} pData - The data to send with the invocation.
-           * @param {Function} fCallback - The callback function to execute after the invocation.
+           * @param {any|Function} pData - The request body, exposed to handlers as pRequest.body, or the completion callback when the body is skipped.
+           * @param {Function} [fCallback] - The callback function to execute after the invocation; required unless passed via pData.
            * @returns {any} - The result of the invocation.
            */
         }, {

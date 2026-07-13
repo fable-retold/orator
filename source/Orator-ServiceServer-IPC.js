@@ -138,7 +138,7 @@ class OratorServiceServerIPC extends libOratorServiceServerBase
 	{
 		let tmpRouteFunctionArray = pRouteFunctionArray;
 		return (
-			(pRequest, pResponse, pData) =>
+			(pRequest, pResponse) =>
 			{
 				let tmpAnticipate = this.fable.serviceManager.instantiateServiceProviderWithoutRegistration('Anticipate');
 
@@ -280,10 +280,14 @@ class OratorServiceServerIPC extends libOratorServiceServerBase
 	/**
 	 * Invokes a method on the IPC provider.
 	 *
+	 * The route handler is dispatched with the canonical find-my-way signature
+	 * (pRequest, pResponse, pParams, pStore, pSearchParams), so handlers
+	 * registered directly on the router see the same arguments as lookup().
+	 *
 	 * @param {string} pMethod - The method to invoke.
 	 * @param {string} pRoute - The route to invoke.
-	 * @param {any} pData - The data to pass to the method.
-	 * @param {Function} fCallback - The callback function to handle the response.
+	 * @param {any|Function} pData - The request body, exposed to handlers as pRequest.body, or the completion callback when the body is skipped.
+	 * @param {Function} [fCallback] - The callback function to handle the response; required unless passed via pData.
 	 * @throws {Error} Throws an error if invoked without a callback function.
 	 */
 	invoke(pMethod, pRoute, pData, fCallback)
@@ -303,6 +307,7 @@ class OratorServiceServerIPC extends libOratorServiceServerBase
 			{
 				method: pMethod,
 				url: pRoute,
+				body: (typeof(pData) == 'function') ? undefined : pData,
 				guid: this.fable.getUUID()
 			});
 
@@ -319,7 +324,9 @@ class OratorServiceServerIPC extends libOratorServiceServerBase
 		//params: handle._createParamsObject(params)//,
         //searchParams: this.querystringParser(querystring)
 
-		tmpHandler.handler(tmpRequest, tmpSynthesizedResponseData, pData).then(
+		// Dispatch with the canonical find-my-way handler signature so handlers
+		// registered directly on the router see the same arguments as lookup().
+		tmpHandler.handler(tmpRequest, tmpSynthesizedResponseData, tmpHandler.params, tmpHandler.store, tmpHandler.searchParams).then(
 			(pResults)=>
 			{
 				return tmpCallback(null, tmpSynthesizedResponseData.responseData, tmpSynthesizedResponseData, pResults);
