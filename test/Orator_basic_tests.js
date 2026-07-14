@@ -130,6 +130,84 @@ suite
 
 				test
 				(
+					'ipc invoke should deliver the data parameter as the request body',
+					(fDone) =>
+					{
+						let tmpFable = new libFable(defaultFableSettings);
+						tmpFable.serviceManager.addServiceType('Orator', libOrator);
+						let tmpOrator = tmpFable.serviceManager.instantiateServiceProvider('Orator', {});
+						// Start the service
+						tmpOrator.startService();
+						tmpOrator.serviceServer.post
+						(
+							'/echo/body',
+							(pRequest, pResponse, fNext) =>
+							{
+								pResponse.send({ ReceivedBody: pRequest.body });
+								return fNext();
+							}
+						);
+
+						let tmpURI = `/echo/body`;
+						let tmpBody = { Filter: 'FBV~IDCustomer~EQ~6', Cap: 50 };
+						tmpOrator.invoke('POST', tmpURI, tmpBody,
+							(pError, pResponseData) =>
+							{
+								let tmpResponseObject = JSON.parse(pResponseData);
+								Expect(tmpResponseObject).to.have.a.property('ReceivedBody');
+								Expect(tmpResponseObject.ReceivedBody).to.deep.equal(tmpBody);
+								// The data-skipped arity (callback as parameter 3) should leave body undefined
+								tmpOrator.invoke('POST', tmpURI,
+									(pSecondError, pSecondResponseData) =>
+									{
+										let tmpSecondResponseObject = JSON.parse(pSecondResponseData);
+										Expect(tmpSecondResponseObject).to.not.have.a.property('ReceivedBody');
+										return fDone();
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'ipc invoke should dispatch raw router handlers with the canonical find-my-way signature',
+					(fDone) =>
+					{
+						let tmpFable = new libFable(defaultFableSettings);
+						tmpFable.serviceManager.addServiceType('Orator', libOrator);
+						let tmpOrator = tmpFable.serviceManager.instantiateServiceProvider('Orator', {});
+						// Start the service
+						tmpOrator.startService();
+
+						let tmpRouteStore = { RouteDescription: 'raw handler store' };
+						// Register directly on the router, bypassing the orator route wrappers
+						tmpOrator.serviceServer.router.on('POST', '/raw/:section',
+							async (pRequest, pResponse, pParams, pStore, pSearchParams) =>
+							{
+								pResponse.send(
+									{
+										Params: pParams,
+										Store: pStore,
+										SearchParams: pSearchParams,
+										Body: pRequest.body
+									});
+							}, tmpRouteStore);
+
+						tmpOrator.invoke('POST', '/raw/widgets?Verbose=1', { Name: 'Widget Nine' },
+							(pError, pResponseData) =>
+							{
+								let tmpResponseObject = JSON.parse(pResponseData);
+								Expect(tmpResponseObject.Params).to.deep.equal({ section: 'widgets' });
+								Expect(tmpResponseObject.Store).to.deep.equal(tmpRouteStore);
+								Expect(tmpResponseObject.SearchParams).to.deep.equal({ Verbose: '1' });
+								Expect(tmpResponseObject.Body).to.deep.equal({ Name: 'Widget Nine' });
+								return fDone();
+							});
+					}
+				);
+
+				test
+				(
 					'ipc should be able to process any number of handler additions with the use function',
 					(fDone) =>
 					{

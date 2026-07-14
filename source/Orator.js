@@ -308,8 +308,8 @@ class Orator extends libFableServiceProviderBase
 	 *
 	 * @param {string} pMethod - The method to invoke.
 	 * @param {string} pRoute - The route to invoke.
-	 * @param {any} pData - The data to send with the invocation.
-	 * @param {Function} fCallback - The callback function to execute after the invocation.
+	 * @param {any|Function} pData - The request body, exposed to handlers as pRequest.body, or the completion callback when the body is skipped.
+	 * @param {Function} [fCallback] - The callback function to execute after the invocation; required unless passed via pData.
 	 * @returns {any} - The result of the invocation.
 	 */
 	invoke(pMethod, pRoute, pData, fCallback)
